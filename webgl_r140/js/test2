@@ -1,0 +1,78 @@
+// Crear la escena, la cámara y el renderizador
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.getElementById('container').appendChild(renderer.domElement);
+
+// Añadir luces a la escena
+const light = new THREE.PointLight(0xffffff, 1, 100);
+light.position.set(10, 10, 10);
+scene.add(light);
+
+// Controles de la cámara
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+// Crear geometrías
+const cubeGeometry = new THREE.BoxGeometry(1, 1, 1);
+const sphereGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+const coneGeometry = new THREE.ConeGeometry(0.5, 1, 32);
+const cylinderGeometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+
+// Crear materiales
+const material1 = new THREE.MeshStandardMaterial({ color: 0xff0000 }); // Rojo
+const material2 = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); // Verde
+const material3 = new THREE.MeshStandardMaterial({ color: 0x0000ff }); // Azul
+const material4 = new THREE.MeshStandardMaterial({ color: 0xffff00 }); // Amarillo
+
+// Crear mallas (figuras) y añadirlas a la escena
+const cube = new THREE.Mesh(cubeGeometry, material1);
+cube.position.x = -3;
+scene.add(cube);
+
+const sphere = new THREE.Mesh(sphereGeometry, material2);
+sphere.position.x = 0;
+scene.add(sphere);
+
+const cone = new THREE.Mesh(coneGeometry, material3);
+cone.position.x = 3;
+scene.add(cone);
+
+const cylinder = new THREE.Mesh(cylinderGeometry, material4);
+cylinder.position.x = 6;
+scene.add(cylinder);
+
+// Posicionar la cámara
+camera.position.z = 5;
+
+// Animar la escena
+function animate() {
+  requestAnimationFrame(animate);
+
+  // Rotar las figuras
+  cube.rotation.x += 0.01;
+  cube.rotation.y += 0.01;
+
+  sphere.rotation.x += 0.01;
+  sphere.rotation.y += 0.01;
+
+  cone.rotation.x += 0.01;
+  cone.rotation.y += 0.01;
+
+  cylinder.rotation.x += 0.01;
+  cylinder.rotation.y += 0.01;
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// Ajustar el tamaño de la ventana
+window.addEventListener('resize', function () {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  renderer.setSize(width, height);
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+});

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Articulado en Three.js</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+    </style>
+</head>
+<body>
+<script src="lib/three.min_r140.js"></script>
+<script src="lib/OrbitControls.js"></script>
+
+<script>
+  // Scene, Camera, Renderer
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  // Floor (Suelo)
+  const floorGeometry = new THREE.PlaneGeometry(1000, 1000);
+  const floorMaterial = new THREE.MeshBasicMaterial({color: 0xAAAAAA, wireframe: true, side: THREE.DoubleSide});
+  const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  floor.rotation.x = Math.PI / 2;
+  scene.add(floor);
+
+  // Base
+  const baseGeometry = new THREE.CylinderGeometry(15, 15, 30, 32); // r=15, h=30 (bajada de altura)
+  const baseMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+  const base = new THREE.Mesh(baseGeometry, baseMaterial);
+  base.position.y = 15; // half height of base
+  scene.add(base);
+
+  // Arm Group (Brazo)
+  const armGroup = new THREE.Group();
+
+  // Axis (Eje)
+  const axisGeometry = new THREE.CylinderGeometry(4, 4, 80, 32); // r=4, h=80 (reducido)
+  const axisMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+  const axis = new THREE.Mesh(axisGeometry, axisMaterial);
+  axis.position.y = 40; // Adjusted for new height
+  armGroup.add(axis);
+
+  // Bolt (Esparrago)
+  const boltGeometry = new THREE.CylinderGeometry(3, 3, 18, 32); // r=3, h=18
+  const boltMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+  const bolt = new THREE.Mesh(boltGeometry, boltMaterial);
+  bolt.position.y = 80; // Adjusted to fit arm's new height
+  armGroup.add(bolt);
+
+  // Joint (Rotula)
+  const jointGeometry = new THREE.SphereGeometry(15, 32, 32); // r=15
+  const jointMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+  const joint = new THREE.Mesh(jointGeometry, jointMaterial);
+  joint.position.y = 100; // Adjusted for new height
+  armGroup.add(joint);
+
+  // Forearm Group (Antebrazo)
+  const forearmGroup = new THREE.Group();
+
+  // Disc (Disco)
+  const discGeometry = new THREE.CylinderGeometry(22, 22, 6, 32); // r=22, h=6
+  const discMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+  const disc = new THREE.Mesh(discGeometry, discMaterial);
+  disc.position.y = 3; // middle of the forearm group
+  forearmGroup.add(disc);
+
+  // Spokes (Nervios)
+  const spokeGeometry = new THREE.BoxGeometry(4, 60, 4); // 4x60x4 (ajustado)
+  const spokeMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+  for (let i = 0; i < 4; i++) {
+      const spoke = new THREE.Mesh(spokeGeometry, spokeMaterial);
+      spoke.position.y = 30; // half the height of the spoke
+      spoke.position.x = Math.cos(i * Math.PI / 2) * 20; // r=20
+      spoke.position.z = Math.sin(i * Math.PI / 2) * 20; // r=20
+      forearmGroup.add(spoke);
+  }
+
+  // Hand (Mano)
+  const handGeometry = new THREE.CylinderGeometry(15, 15, 30, 32); // r=15, h=30 (reducido)
+  const handMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+  const hand = new THREE.Mesh(handGeometry, handMaterial);
+  hand.position.y = 60; // top of the spokes
+  forearmGroup.add(hand);
+
+  // Claw/Pincer (Pinza) - BufferGeometry for pyramid shape
+  function createPinchGeometry() {
+      const geometry = new THREE.BufferGeometry();
+
+      const vertices = new Float32Array([
+          // Base of the pyramid (rectangular base)
+          -1, 0, -2,  // vertex 0
+          1, 0, -2,   // vertex 1
+          1, 0, 2,    // vertex 2
+          -1, 0, 2,   // vertex 3
+          // Tip of the pyramid
+          0, 4, 0     // vertex 4 (top)
+      ]);
+
+      // Faces of the pyramid (triangular sides + base)
+      const indices = [
+          // Sides
+          0, 1, 4,    // side 1
+          1, 2, 4,    // side 2
+          2, 3, 4,    // side 3
+          3, 0, 4,    // side 4
+          // Base
+          0, 1, 2,    // base triangle 1
+          0, 2, 3     // base triangle 2
+      ];
+
+      // Define the normals (for lighting calculations)
+      const normals = new Float32Array([
+          // Base of the pyramid (normal pointing down)
+          0, -1, 0,   // vertex 0 normal
+          0, -1, 0,   // vertex 1 normal
+          0, -1, 0,   // vertex 2 normal
+          0, -1, 0,   // vertex 3 normal
+          // Tip of the pyramid (all normals pointing upwards towards tip)
+          0, 1, 0     // vertex 4 normal
+      ]);
+
+      geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+      geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+      geometry.setIndex(indices);
+
+      return geometry;
+  }
+
+  const pinchMaterial = new THREE.MeshBasicMaterial({color: 0xff0000, wireframe: true});
+  const pinch1 = new THREE.Mesh(createPinchGeometry(), pinchMaterial);
+  pinch1.position.set(5, 85, 10); // Adjusted position to lower height
+
+  const pinch2 = pinch1.clone(); // Clone the first pinza
+  pinch2.position.set(-5, 85, -10);
+  pinch2.scale.set(-1, 1, 1); // Mirror the second pinza
+
+  forearmGroup.add(pinch1);
+  forearmGroup.add(pinch2);
+
+  // Correct Forearm Pivot Point
+  forearmGroup.position.y = 100; // Set forearm group's pivot point at the joint position
+  armGroup.add(forearmGroup);
+  scene.add(armGroup);
+
+  // Camera positioning
+  camera.position.z = 250;
+  camera.position.y = 150;
+  camera.lookAt(0, 50, 0);
+
+  // Animation loop
+  function animate() {
+      requestAnimationFrame(animate);
+      armGroup.rotation.y += 0.01; // Rotate arm
+      forearmGroup.rotation.x += 0.01; // Rotate forearm correctly
+      renderer.render(scene, camera);
+  }
+  animate();
+</script>
+</body>
+</html>
+
