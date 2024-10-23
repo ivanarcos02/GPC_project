@@ -1,6 +1,8 @@
 
 
 
+
+
 // Crear escena
 const scene = new THREE.Scene();
 
@@ -105,6 +107,13 @@ loader.load(
     // Rotación para que mire hacia el eje X (el frente del pájaro debe mirar hacia adelante en el eje X)
     //  // Gira 90 grados en el eje Y para que mire hacia el eje X
     bird.rotation.y = Math.PI / 2;
+
+    bird.traverse(function(child) {
+        if (child.isMesh) {
+          child.castShadow = true;   // Habilitar que proyecte sombras
+          child.receiveShadow = false; // El pájaro no necesita recibir sombras
+        }
+      });
     // Añade el modelo a la escena
     scene.add(bird);
   },
@@ -239,6 +248,12 @@ function createPipeWithEdges() {
 
     // Crear malla para la tubería interna
     const pipeInner = new THREE.Mesh(pipeInnerGeometry, pipeMaterial);
+
+    // Habilitar que las geometrías reciban sombras
+    pipeOuter.receiveShadow = true;
+    pipeInner.receiveShadow = true;
+    pipeEdgeTop.receiveShadow = true;
+    pipeEdgeBottom.receiveShadow = true;
 
     // Crear un grupo para combinar las geometrías
     const pipeGroup = new THREE.Group();
@@ -551,23 +566,24 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;  // Sombras suaves
 const ambientLight = new THREE.AmbientLight(0x404040, 0.5); // Luz tenue
 scene.add(ambientLight);
 
-// Luz direccional con sombras
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
-directionalLight.position.set(10, 20, 10);
-directionalLight.castShadow = true;  // Habilitar sombras en esta luz
-directionalLight.shadow.mapSize.width = 1024;
-directionalLight.shadow.mapSize.height = 1024;
-scene.add(directionalLight);
 
-// Luz focal con sombras
+
+// Luz focal (spotlight) con sombras mejoradas
 const spotLight = new THREE.SpotLight(0xffffff, 1);
-spotLight.position.set(15, 20, 10);
-spotLight.castShadow = true;  // Habilitar sombras
-spotLight.shadow.mapSize.width = 1024;
-spotLight.shadow.mapSize.height = 1024;
-spotLight.angle = Math.PI / 6;
-spotLight.penumbra = 0.1;
+spotLight.position.set(10, 5, 0);
+spotLight.castShadow = true;
+spotLight.shadow.mapSize.width = 2048;  // Aumenta la calidad de la sombra
+spotLight.shadow.mapSize.height = 2048;
+spotLight.shadow.camera.near = 0.5;     // Ajusta la distancia del frustum de la cámara de sombras
+spotLight.shadow.camera.far = 20;
+spotLight.angle = Math.PI / 4;
+spotLight.penumbra = 0.2;  // Ajusta el suavizado de las sombras
+spotLight.shadow.bias = -0.0001; 
 scene.add(spotLight);
+
+
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 
 // Configurar tuberías para arrojar y recibir sombras
