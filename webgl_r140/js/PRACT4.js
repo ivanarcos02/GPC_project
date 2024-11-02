@@ -1,29 +1,32 @@
-let renderer, scene, camera, cameraControls, miniMapCamera, miniMapRenderer, robot, base, brazo, antebrazo, pinza1, pinza2;
+let renderer, scene, camera, cameraControls, miniMapCamera, miniMapRenderer, robot, base, brazo, antebrazo, cilindroAntebrazo, pinza1, pinza2;
+
 function init() {
-  // Inicializa el renderizador
-  renderer = new THREE.WebGLRenderer();
+  // Inicializa el renderizador principal
+  renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(new THREE.Color(0xFFFFFF)); // Fondo blanco
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Tipo de sombra
   document.getElementById('container').appendChild(renderer.domElement);
 
   // Inicializa el renderizador de la vista miniatura (para el minimapa)
-
-miniMapRenderer = new THREE.WebGLRenderer();
-miniMapRenderer.setSize(window.innerWidth / 6, window.innerWidth / 6); // Smaller size (1/6th of the main view width)
-miniMapRenderer.setClearColor(new THREE.Color(0xFFFFFF)); // White background for the minimap
-miniMapRenderer.domElement.style.position = "absolute";
-miniMapRenderer.domElement.style.top = "10px";  // Adjust as needed for spacing from top
-miniMapRenderer.domElement.style.left = "10px"; // Adjust as needed for spacing from left
-miniMapRenderer.domElement.style.border = "2px solid #000"; // Optional border for visibility
-document.body.appendChild(miniMapRenderer.domElement);
+  miniMapRenderer = new THREE.WebGLRenderer({ antialias: true });
+  miniMapRenderer.setSize(window.innerWidth / 6, window.innerWidth / 6); // Tamaño reducido
+  miniMapRenderer.setClearColor(new THREE.Color(0xFFFFFF)); // Fondo blanco para el minimap
+  miniMapRenderer.domElement.style.position = "absolute";
+  miniMapRenderer.domElement.style.top = "10px";  // Ajustar según sea necesario
+  miniMapRenderer.domElement.style.left = "10px"; // Ajustar según sea necesario
+  miniMapRenderer.domElement.style.border = "2px solid #000"; // Borde opcional
+  miniMapRenderer.shadowMap.enabled = true;
+  document.body.appendChild(miniMapRenderer.domElement);
 
   // Inicializa la escena
   scene = new THREE.Scene();
 
   // Cámara principal
-  var aspectRatio = window.innerWidth / window.innerHeight;
+  const aspectRatio = window.innerWidth / window.innerHeight;
   camera = new THREE.PerspectiveCamera(50, aspectRatio, 0.1, 2000);
-  camera.position.set(0, 100, 500);  // Alejamos y elevamos la cámara para una mejor visualización
+  camera.position.set(0, 200, 500);  // Alejamos y elevamos la cámara para una mejor visualización
   camera.lookAt(0, 100, 0);  // Mirar hacia el centro de la escena
 
   // Controles de cámara
@@ -46,42 +49,41 @@ document.body.appendChild(miniMapRenderer.domElement);
 }
 
 function initKeyboardControls() {
-    window.addEventListener('keydown', function(event) {
-      switch (event.code) {
-        case 'ArrowUp':
-          controls.moveRobotZ -= 10; // Mover hacia adelante en el eje Z
-          break;
-        case 'ArrowDown':
-          controls.moveRobotZ += 10; // Mover hacia atrás en el eje Z
-          break;
-        case 'ArrowLeft':
-          controls.moveRobotX -= 10; // Mover hacia la izquierda en el eje X
-          break;
-        case 'ArrowRight':
-          controls.moveRobotX += 10; // Mover hacia la derecha en el eje X
-          break;
-      }
-      updateRobotPosition();
-    });
-  }
-  
-
+  window.addEventListener('keydown', function(event) {
+    switch (event.code) {
+      case 'ArrowUp':
+        controls.moveRobotZ -= 10; // Mover hacia adelante en el eje Z
+        break;
+      case 'ArrowDown':
+        controls.moveRobotZ += 10; // Mover hacia atrás en el eje Z
+        break;
+      case 'ArrowLeft':
+        controls.moveRobotX -= 10; // Mover hacia la izquierda en el eje X
+        break;
+      case 'ArrowRight':
+        controls.moveRobotX += 10; // Mover hacia la derecha en el eje X
+        break;
+    }
+    updateRobotPosition();
+  });
+}
 
 function crearPinza() {
   const pinza = new THREE.Object3D();
 
   // Crear la caja (paralelepípedo)
   const geometryCaja = new THREE.BoxGeometry(20, 19, 4); 
-  const materialCaja = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+  const materialCaja = new THREE.MeshStandardMaterial({ color: 0xDC143C, metalness: 0.6, roughness: 0.4 }); // Carmesí
   const caja = new THREE.Mesh(geometryCaja, materialCaja);
   caja.position.set(0, 0, 0); // Posicionar la caja para que esté alineada con la parte piramidal
-
+  caja.castShadow = true;
+  caja.receiveShadow = true;
   pinza.add(caja);
 
   // Crear la parte piramidal usando BufferGeometry
   const geometryTrapezoid = new THREE.BufferGeometry();
   const vertices = new Float32Array([
-    -19/2, 0, -2,  19/2, 0, -2,  19/2, 0,  2, -19/2, 0,  2,
+    -19/2, 0, -2,  19/2, 0, -2,  19/2, 0,  2, -19/2, 0, 2,
     -5, 19, -1,  5, 19, -1,  5, 19,  1, -5, 19,  1
   ]);
   
@@ -91,10 +93,12 @@ function crearPinza() {
   geometryTrapezoid.setIndex(indices);
   geometryTrapezoid.computeVertexNormals();
 
-  const materialTrapezoid = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+  const materialTrapezoid = new THREE.MeshStandardMaterial({ color: 0xDC143C, metalness: 0.6, roughness: 0.4 }); // Carmesí
   const trapezoid = new THREE.Mesh(geometryTrapezoid, materialTrapezoid);
   trapezoid.rotation.z = -Math.PI / 2;
   trapezoid.position.set(10, 0, 0);
+  trapezoid.castShadow = true;
+  trapezoid.receiveShadow = true;
   pinza.add(trapezoid);
 
   return pinza;
@@ -104,80 +108,120 @@ function loadScene() {
   // Crear el nodo raíz "robot"
   robot = new THREE.Object3D();
 
+  // Agregar luz ambiental
+  const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.5); // Luz ambiental blanca suave
+  scene.add(ambientLight);
+
+  // Agregar luz direccional
+  const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1);
+  directionalLight.position.set(200, 500, 300);
+  directionalLight.castShadow = true; // Habilitar sombras
+  directionalLight.shadow.mapSize.width = 2048;
+  directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.shadow.camera.near = 0.5;
+  directionalLight.shadow.camera.far = 1500;
+  directionalLight.shadow.camera.left = -500;
+  directionalLight.shadow.camera.right = 500;
+  directionalLight.shadow.camera.top = 500;
+  directionalLight.shadow.camera.bottom = -500;
+  scene.add(directionalLight);
+
   // Crear el suelo (plano de 1000x1000 en XZ)
   const geometrySuelo = new THREE.PlaneGeometry(1000, 1000);
-  const materialSuelo = new THREE.MeshBasicMaterial({ color: 0x89ac76, side: THREE.DoubleSide , wireframe: true });
+  const materialSuelo = new THREE.MeshStandardMaterial({ color: 0x8B8B8B, side: THREE.DoubleSide, metalness: 0.3, roughness: 0.8 }); // Gris Medio
   const suelo = new THREE.Mesh(geometrySuelo, materialSuelo);
   suelo.rotation.x = -Math.PI / 2;
   suelo.position.y = -7.5;
+  suelo.receiveShadow = true; // Habilitar recepción de sombras
   scene.add(suelo);
 
   // Crear la base del robot
-  const geometryBase = new THREE.CylinderGeometry(50, 50, 15, 18);
-  const materialBase = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+  const geometryBase = new THREE.CylinderGeometry(50, 50, 15, 32);
+  const materialBase = new THREE.MeshStandardMaterial({ color: 0xB0C4DE, metalness: 0.7, roughness: 0.3 }); // Acero Claro
   base = new THREE.Mesh(geometryBase, materialBase);
+  base.castShadow = true; // Habilitar lanzamiento de sombras
+  base.receiveShadow = true;
   robot.add(base);
 
   // Crear el brazo del robot
   brazo = new THREE.Object3D();
   base.add(brazo);
 
-  const geometryEje = new THREE.CylinderGeometry(20, 20, 18, 9);
-  const materialEje = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+  // Eje del brazo
+  const geometryEje = new THREE.CylinderGeometry(20, 20, 18, 32);
+  const materialEje = new THREE.MeshStandardMaterial({ color: 0x4682B4, metalness: 0.8, roughness: 0.2 }); // Azul Acero
   const eje = new THREE.Mesh(geometryEje, materialEje);
   eje.rotation.x = -Math.PI / 2;
+  eje.castShadow = true;
+  eje.receiveShadow = true;
   brazo.add(eje);
 
-  const geometryEsparrago = new THREE.CylinderGeometry(10, 10, 120, 12);
-  const materialEsparrago = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+  // Esparrago del brazo
+  const geometryEsparrago = new THREE.CylinderGeometry(10, 10, 120, 32);
+  const materialEsparrago = new THREE.MeshStandardMaterial({ color: 0xB0E0E6, metalness: 0.8, roughness: 0.2 }); // Azul Polvo
   const esparrago = new THREE.Mesh(geometryEsparrago, materialEsparrago);
-  esparrago.position.set(0, 120/2, 0);
+  esparrago.position.set(0, 60, 0); // Posicionar en el brazo
+  esparrago.castShadow = true;
+  esparrago.receiveShadow = true;
   brazo.add(esparrago);
 
-  const geometryRotula = new THREE.SphereGeometry(20, 12, 12);
-  const materialRotula = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+  // Rótula del brazo
+  const geometryRotula = new THREE.SphereGeometry(20, 32, 32);
+  const materialRotula = new THREE.MeshStandardMaterial({ color: 0xCD5C5C, metalness: 0.7, roughness: 0.3 }); // Café Rojo
   const rotula = new THREE.Mesh(geometryRotula, materialRotula);
   rotula.position.set(0, 120, 0);
+  rotula.castShadow = true;
+  rotula.receiveShadow = true;
   brazo.add(rotula);
 
   // Crear el antebrazo del robot
   antebrazo = new THREE.Object3D();
   rotula.add(antebrazo);
 
-  const geometryDisco = new THREE.CylinderGeometry(22, 22, 6, 12);
-  const materialDisco = new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+  // Disco del antebrazo
+  const geometryDisco = new THREE.CylinderGeometry(22, 22, 6, 32);
+  const materialDisco = new THREE.MeshStandardMaterial({ color: 0x708090, metalness: 0.8, roughness: 0.2 }); // Gris Pizarra
   const disco = new THREE.Mesh(geometryDisco, materialDisco);
+  disco.castShadow = true;
+  disco.receiveShadow = true;
   antebrazo.add(disco);
 
+  // Nervios del antebrazo
   const geometryNervio = new THREE.BoxGeometry(4, 80, 4);
+  const materialNervio = new THREE.MeshStandardMaterial({ color: 0x708090, metalness: 0.8, roughness: 0.2 }); // Gris Pizarra
   for (let i = 0; i < 4; i++) {
-    const nervio = new THREE.Mesh(geometryNervio, materialDisco);
+    const nervio = new THREE.Mesh(geometryNervio, materialNervio);
     const angle = (i * Math.PI) / 2;
     nervio.position.set(12 * Math.cos(angle), 40, 12 * Math.sin(angle));
+    nervio.castShadow = true;
+    nervio.receiveShadow = true;
     antebrazo.add(nervio);
   }
 
-  // Cilindro del antebrazo, mano del robot  (Radio=15, Altura=40)
-  const geometryCilindroAntebrazo = new THREE.CylinderGeometry(15,15, 40, 32); // Radio 22, altura 6
-  cilindroAntebrazo = new THREE.Mesh(geometryCilindroAntebrazo, materialDisco);
-  cilindroAntebrazo.position.set(0, 80, 0); // Posicionar encima de los nervios
-  cilindroAntebrazo.rotation.x = -Math.PI / 2; // Rotar para que esté en el plano
-  antebrazo.add(cilindroAntebrazo); // Añadir cilindro del antebrazo
-  
-  // Añadir las pinzas al cilindro del antebrazo (en vez del antebrazo)
+  // Cilindro del antebrazo
+  const geometryCilindroAntebrazo = new THREE.CylinderGeometry(15, 15, 40, 32);
+  const materialCilindroAntebrazo = new THREE.MeshStandardMaterial({ color: 0x708090, metalness: 0.7, roughness: 0.3 }); // Gris Pizarra
+  cilindroAntebrazo = new THREE.Mesh(geometryCilindroAntebrazo, materialCilindroAntebrazo);
+  cilindroAntebrazo.position.set(0, 80, 0);
+  cilindroAntebrazo.rotation.x = -Math.PI / 2;
+  cilindroAntebrazo.castShadow = true;
+  cilindroAntebrazo.receiveShadow = true;
+  antebrazo.add(cilindroAntebrazo);
+
+  // Añadir las pinzas al cilindro del antebrazo
   pinza1 = crearPinza();
-  pinza1.rotation.x = -Math.PI / 2; // Rotar para que esté en el plano
-  pinza1.position.set(10, -10, 0); // Cambiar la posición en relación al cilindro
+  pinza1.rotation.x = -Math.PI / 2;
+  pinza1.position.set(10, -10, 0);
+  cilindroAntebrazo.add(pinza1);
+
   pinza2 = crearPinza();
-  pinza2.rotation.x = -Math.PI / 2; // Rotar para que esté en el plano
-  pinza2.position.set(10, 10, 0); // Cambiar la posición en relación al cilindro
-  cilindroAntebrazo.add(pinza1);  // Añadir al cilindro
-  cilindroAntebrazo.add(pinza2);  // Añadir al cilindro
+  pinza2.rotation.x = -Math.PI / 2;
+  pinza2.position.set(10, 10, 0);
+  cilindroAntebrazo.add(pinza2);
 
   // Añadir el robot completo a la escena
   scene.add(robot);
 }
-
 
 function updateAspectRatio() {
   // Actualiza el tamaño de la cámara principal
@@ -186,7 +230,7 @@ function updateAspectRatio() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 
   // Actualiza el tamaño del renderizador de la vista cenital (miniatura)
-  const size = Math.min(window.innerWidth, window.innerHeight) / 4;
+  const size = Math.min(window.innerWidth, window.innerHeight) / 6;
   miniMapRenderer.setSize(size, size);
 }
 
@@ -203,7 +247,7 @@ function createGUI() {
     rotateForearmZ: 0,
     rotateClaw: 0,
     openClaw: 0,
-    wireframe: true,
+    wireframe: false, // Cambiar a false por defecto
     animate: animateRobot
   };
 
@@ -241,7 +285,7 @@ function updateForearmRotationZ() {
 
 function updateClawRotation() {
   cilindroAntebrazo.rotation.y = THREE.MathUtils.degToRad(-controls.rotateClaw);
-  //pinza2.rotation.z = THREE.MathUtils.degToRad(controls.rotateClaw);
+  // pinza2.rotation.z = THREE.MathUtils.degToRad(controls.rotateClaw);
 }
 
 function updateClawOpen() {
@@ -292,3 +336,4 @@ init();
 loadScene();
 createGUI();
 render();
+
